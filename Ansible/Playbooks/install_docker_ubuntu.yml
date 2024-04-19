@@ -1,0 +1,59 @@
+---
+- name: Install docker and docker-compose on Ubuntu
+  hosts: localhost
+  gather_facts: yes
+  become: yes
+  vars:
+    username: devops
+  tasks:
+  - name: Install packages
+    apt:
+      name: "{{item}}"
+      state: present
+      update_cache: yes
+    loop:
+      - ca-certificates
+      - curl
+      - git
+
+  - name: Create the folder /etc/apt/keyrings
+    file:
+      path: /etc/apt/keyrings
+      state: directory
+      mode: '0755'
+
+  - name: Key for Docker repo
+    get_url:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      dest: /etc/apt/keyrings/docker.asc
+      mode: '0644'
+
+  - name: Add Docker to apt repo
+    lineinfile:
+      path: /etc/apt/sources.list.d/docker.list
+      line: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+      create: yes
+
+  - name: Install Docker
+    apt:
+      name: "{{item}}"
+      state: present
+      update_cache: yes
+    loop:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+
+  - name: Add your user to docker group
+    user:
+      name: "{{ username }}"
+      groups: docker 
+
+  - name: Start and enabled service Docker
+    systemd:
+      state: started
+      name: docker
+      enabled: yes
+
